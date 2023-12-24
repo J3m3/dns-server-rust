@@ -13,13 +13,17 @@ fn main() {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
-                let question = [DnsQuestion {
-                    domain_name: String::from("codecrafters.io"),
+
+                let domain_name = "codecrafters.io";
+                let ip_addr = "8.8.8.8";
+
+                let dns_questions = vec![DnsQuestion {
+                    domain_name: String::from(domain_name),
                     query_type: 1,
                     query_class: 1,
                 }];
-                let question_count = question.len() as u16;
-                let header = DnsHeader {
+                let question_count = dns_questions.len() as u16;
+                let dns_header = DnsHeader {
                     id: 1234,
                     qr: 1,
                     opcode: 0,
@@ -30,23 +34,29 @@ fn main() {
                     z: 0,
                     rcode: 0,
                     qdcount: question_count,
-                    ancount: 0,
+                    ancount: 1,
                     nscount: 0,
                     arcount: 0,
                 };
+                let dns_answer = DnsAnswer {
+                    domain_name: String::from(domain_name),
+                    record_type: 1,
+                    class: 1,
+                    ttl: 60,
+                    rdlength: 4,
+                    rdata: String::from(ip_addr),
+                };
+                let dns_response = DnsResponse {
+                    dns_header,
+                    dns_questions,
+                    dns_answer,
+                };
 
-                let response = [
-                    header.to_be_bytes_vector(),
-                    question
-                        .iter()
-                        .flat_map(|dns_question| dns_question.to_be_bytes_vector())
-                        .collect(),
-                ]
-                .concat();
+                let dns_response = Vec::from(dns_response);
 
-                println!("Response: {:?}", response);
+                println!("Response: {:?}", dns_response);
                 udp_socket
-                    .send_to(&response, source)
+                    .send_to(&dns_response, source)
                     .expect("Failed to send response");
             }
             Err(e) => {
