@@ -15,7 +15,7 @@ pub struct DnsHeader {
 }
 
 impl DnsHeader {
-    pub fn into_be_bytes_vector(self) -> Vec<u8> {
+    pub fn to_be_bytes_vector(&self) -> Vec<u8> {
         let mut buf = Vec::new();
 
         buf.extend_from_slice(&self.id.to_be_bytes());
@@ -30,5 +30,35 @@ impl DnsHeader {
         buf.extend_from_slice(&self.arcount.to_be_bytes());
 
         buf
+    }
+}
+
+pub struct DnsQuestion {
+    pub domain_name: String,
+    pub query_type: u16,
+    pub query_class: u16,
+}
+
+impl DnsQuestion {
+    pub fn to_be_bytes_vector(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+
+        buf.extend(self.get_encoded_name());
+        buf.extend_from_slice(&self.query_type.to_be_bytes());
+        buf.extend_from_slice(&self.query_class.to_be_bytes());
+
+        buf
+    }
+
+    fn get_encoded_name(&self) -> Vec<u8> {
+        format!("{}.", self.domain_name)
+            .split('.')
+            .map(|e| {
+                let len_byte = (e.len() as u8).to_be_bytes().to_vec();
+                let content_bytes = e.as_bytes().to_vec();
+                [len_byte, content_bytes].concat()
+            })
+            .collect::<Vec<Vec<u8>>>()
+            .concat()
     }
 }
