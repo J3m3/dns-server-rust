@@ -1,7 +1,7 @@
-mod dns;
+mod dns_response;
 
-use dns::*;
-use std::net::UdpSocket;
+use dns_response::*;
+use std::net::{Ipv4Addr, UdpSocket};
 
 fn main() {
     println!("Start DNS server");
@@ -15,7 +15,7 @@ fn main() {
                 println!("Received {} bytes from {}", size, source);
 
                 let domain_name = "codecrafters.io";
-                let ip_addr = "8.8.8.8";
+                let ip_addr = Ipv4Addr::new(8, 8, 8, 8);
 
                 let dns_questions = vec![DnsQuestion {
                     domain_name: String::from(domain_name),
@@ -44,7 +44,7 @@ fn main() {
                     class: 1,
                     ttl: 60,
                     rdlength: 4,
-                    rdata: String::from(ip_addr),
+                    rdata: RecordData::IpAddress(ip_addr),
                 };
                 let dns_response = DnsResponse {
                     dns_header,
