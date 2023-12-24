@@ -14,7 +14,7 @@ fn main() {
             Ok((size, source)) => {
                 println!("Received {} bytes from {}", size, source);
                 let question = [DnsQuestion {
-                    domain_name: String::from("google.com"),
+                    domain_name: String::from("codecrafters.io"),
                     query_type: 1,
                     query_class: 1,
                 }];
