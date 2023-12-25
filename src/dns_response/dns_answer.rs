@@ -16,6 +16,19 @@ pub struct DnsAnswer {
     pub rdata: RecordData,
 }
 
+impl Default for DnsAnswer {
+    fn default() -> Self {
+        Self {
+            domain_name: "".to_string(),
+            record_type: 1,
+            class: 1,
+            ttl: 60,
+            rdlength: 4,
+            rdata: RecordData::IpAddress(Ipv4Addr::new(0, 0, 0, 0)),
+        }
+    }
+}
+
 impl From<DnsAnswer> for Vec<u8> {
     fn from(answer: DnsAnswer) -> Self {
         let mut buf: Vec<u8> = Vec::new();
@@ -25,10 +38,10 @@ impl From<DnsAnswer> for Vec<u8> {
         buf.extend_from_slice(&answer.class.to_be_bytes());
         buf.extend_from_slice(&answer.ttl.to_be_bytes());
         buf.extend_from_slice(&answer.rdlength.to_be_bytes());
+
         let encoded_ip_addr = match answer.rdata {
             RecordData::IpAddress(ip_addr) => ip_addr.octets(),
         };
-
         buf.extend(&encoded_ip_addr);
 
         buf

@@ -7,6 +7,16 @@ pub struct DnsQuestion {
     pub query_class: u16,
 }
 
+impl Default for DnsQuestion {
+    fn default() -> Self {
+        Self {
+            domain_name: "".to_string(),
+            query_type: 1,
+            query_class: 1,
+        }
+    }
+}
+
 impl From<DnsQuestion> for Vec<u8> {
     fn from(question: DnsQuestion) -> Self {
         let mut buf = Vec::new();

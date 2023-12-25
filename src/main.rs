@@ -19,32 +19,22 @@ fn main() {
 
                 let dns_questions = vec![DnsQuestion {
                     domain_name: String::from(domain_name),
-                    query_type: 1,
-                    query_class: 1,
+                    ..Default::default()
                 }];
                 let question_count = dns_questions.len() as u16;
                 let dns_header = DnsHeader {
                     id: 1234,
                     qr: 1,
-                    opcode: 0,
-                    aa: 0,
-                    tc: 0,
-                    rd: 0,
-                    ra: 0,
-                    z: 0,
-                    rcode: 0,
                     qdcount: question_count,
                     ancount: 1,
-                    nscount: 0,
-                    arcount: 0,
+                    ..Default::default()
                 };
                 let dns_answer = DnsAnswer {
                     domain_name: String::from(domain_name),
-                    record_type: 1,
-                    class: 1,
                     ttl: 60,
                     rdlength: 4,
                     rdata: RecordData::IpAddress(ip_addr),
+                    ..Default::default()
                 };
                 let dns_response = DnsResponse {
                     dns_header,
