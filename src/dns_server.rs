@@ -11,7 +11,7 @@ use dns_question::DnsQuestion;
 
 use std::{
     io::Result,
-    net::{Ipv4Addr, UdpSocket},
+    net::{Ipv4Addr, ToSocketAddrs, UdpSocket},
 };
 
 pub struct DnsServer {
@@ -19,7 +19,7 @@ pub struct DnsServer {
 }
 
 impl DnsServer {
-    pub fn new(on: &str) -> Result<Self> {
+    pub fn new<T: ToSocketAddrs>(on: T) -> Result<Self> {
         let udp_socket = UdpSocket::bind(on)?;
         Ok(Self { udp_socket })
     }
