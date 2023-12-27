@@ -1,8 +1,16 @@
-mod dns_response;
+mod dns_answer;
+mod dns_header;
+mod dns_message;
+mod dns_question;
+mod domain_name;
 
-use dns_response::*;
+use dns_answer::{DnsAnswer, RecordData};
+use dns_header::DnsHeader;
+use dns_message::DnsMessage;
+use dns_question::DnsQuestion;
+
 use std::{
-    io,
+    io::Result,
     net::{Ipv4Addr, UdpSocket},
 };
 
@@ -11,7 +19,7 @@ pub struct DnsServer {
 }
 
 impl DnsServer {
-    pub fn new(on: &str) -> Result<Self, io::Error> {
+    pub fn new(on: &str) -> Result<Self> {
         let udp_socket = UdpSocket::bind(on)?;
         Ok(Self { udp_socket })
     }
@@ -24,6 +32,9 @@ impl DnsServer {
                 Ok((size, source)) => {
                     println!("Received {} bytes from {}", size, source);
 
+                    let filled_buf: Vec<u8> = buf[..size].to_vec();
+                    let request = DnsMessage::from(filled_buf);
+
                     let domain_name = "codecrafters.io";
                     let ip_addr = Ipv4Addr::new(8, 8, 8, 8);
 
@@ -32,8 +43,11 @@ impl DnsServer {
                         ..Default::default()
                     }];
                     let dns_header = DnsHeader {
-                        id: 1234,
+                        id: request.dns_header.id,
                         qr: 1,
+                        opcode: request.dns_header.opcode,
+                        rd: request.dns_header.rd,
+                        rcode: if request.dns_header.opcode == 0 { 0 } else { 4 },
                         qdcount: dns_questions.len() as u16,
                         ancount: 1,
                         ..Default::default()
@@ -45,7 +59,7 @@ impl DnsServer {
                         rdata: RecordData::IpAddress(ip_addr),
                         ..Default::default()
                     };
-                    let dns_response = DnsResponse {
+                    let dns_response = DnsMessage {
                         dns_header,
                         dns_questions,
                         dns_answer,

@@ -1,4 +1,4 @@
-use super::{DomainName, LabelEncodable};
+use super::domain_name::{DomainName, LabelEncodable};
 
 #[derive(Debug)]
 pub struct DnsQuestion {

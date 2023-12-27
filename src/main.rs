@@ -1,8 +1,7 @@
 mod dns_server;
 
-use std::io::Result;
-
 use dns_server::DnsServer;
+use std::io::Result;
 
 fn main() -> Result<()> {
     println!("Start DNS server");

@@ -1,4 +1,4 @@
-use super::{DomainName, LabelEncodable};
+use super::domain_name::{DomainName, LabelEncodable};
 use std::net::Ipv4Addr;
 
 #[derive(Debug)]
