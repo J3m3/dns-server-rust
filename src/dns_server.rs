@@ -66,8 +66,8 @@ impl DnsServer {
                         dns_answer,
                     };
 
-                    let dns_response = Vec::from(dns_response);
                     println!("Response: {:?}", dns_response);
+                    let dns_response = Vec::from(dns_response);
                     self.udp_socket
                         .send_to(&dns_response, source)
                         .expect("Failed to send response");
