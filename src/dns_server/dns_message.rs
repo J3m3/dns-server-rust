@@ -41,12 +41,12 @@ impl DnsMessage {
 
         let domain_name: Vec<u8> = question_bytes
             .iter()
+            .take_while(|&&b| b != 0)
             .map(|&b| b)
-            .take_while(|&b| b == 0)
             .collect();
 
         let dns_questions = vec![DnsQuestion {
-            domain_name: DomainName::Vec(domain_name.clone()),
+            domain_name: DomainName::Vec(domain_name),
             query_type: 1,
             query_class: 1,
         }];
