@@ -1,13 +1,19 @@
 use super::dns_answer::DnsAnswer;
 use super::dns_header::DnsHeader;
-use super::dns_question::{self, DnsQuestion};
+use super::dns_question::DnsQuestion;
 use super::domain_name;
 
-#[derive(Debug)]
-pub struct DnsMessage {
+#[derive(Debug, Default)]
+pub struct DnsMessageForm {
     pub dns_header: DnsHeader,
     pub dns_questions: Vec<DnsQuestion>,
-    pub dns_answer: DnsAnswer,
+    pub dns_answer: Option<DnsAnswer>,
+}
+
+#[derive(Debug)]
+pub enum DnsMessage {
+    DnsRequest(DnsMessageForm),
+    DnsResponse(DnsMessageForm),
 }
 
 impl DnsMessage {
@@ -30,10 +36,8 @@ impl DnsMessage {
         })
     }
 
-    fn parse_question(question_bytes: &[u8]) -> Option<(Vec<DnsQuestion>, DnsAnswer)> {
-        use super::dns_answer::RecordData;
+    fn parse_question(question_bytes: &[u8]) -> Option<Vec<DnsQuestion>> {
         use domain_name::DomainName;
-        use std::net::Ipv4Addr;
 
         let domain_name: Vec<u8> = question_bytes
             .iter()
@@ -47,16 +51,7 @@ impl DnsMessage {
             query_class: 1,
         }];
 
-        let dns_answer = DnsAnswer {
-            domain_name: DomainName::Vec(domain_name),
-            record_type: 1,
-            class: 1,
-            ttl: 60,
-            rdlength: 4,
-            rdata: RecordData::IpAddress(Ipv4Addr::new(8, 8, 8, 8)),
-        };
-
-        Some((dns_questions, dns_answer))
+        Some(dns_questions)
     }
 
     fn to_u16(bytes: &[u8]) -> u16 {
@@ -74,33 +69,41 @@ impl DnsMessage {
     }
 }
 
-impl From<DnsMessage> for Vec<u8> {
-    fn from(message: DnsMessage) -> Self {
-        [
-            Vec::from(message.dns_header),
-            message
-                .dns_questions
-                .into_iter()
-                .fold(Vec::<u8>::new(), |mut acc, dns_question| {
-                    acc.extend(Vec::from(dns_question));
-                    acc
-                }),
-            Vec::from(message.dns_answer),
-        ]
-        .concat()
+impl TryFrom<DnsMessage> for Vec<u8> {
+    type Error = &'static str;
+
+    fn try_from(message: DnsMessage) -> Result<Self, Self::Error> {
+        match message {
+            DnsMessage::DnsRequest(_) => {
+                Err("Only DnsMessage::DnsResponse can be converted to Vec<u8>")
+            }
+            DnsMessage::DnsResponse(message) => {
+                let dns_header = Vec::from(message.dns_header);
+                let dns_questions = message.dns_questions.into_iter().fold(
+                    Vec::<u8>::new(),
+                    |mut acc, dns_question| {
+                        acc.extend(Vec::from(dns_question));
+                        acc
+                    },
+                );
+                let dns_answer = Vec::from(message.dns_answer.expect("No answer in response"));
+
+                Ok([dns_header, dns_questions, dns_answer].concat())
+            }
+        }
     }
 }
 
 impl From<Vec<u8>> for DnsMessage {
     fn from(byte_vec: Vec<u8>) -> Self {
         let dns_header = DnsMessage::parse_header(&byte_vec[0..12]).unwrap_or_default();
-        let (dns_questions, dns_answer) = DnsMessage::parse_question(&byte_vec[12..])
+        let dns_questions = DnsMessage::parse_question(&byte_vec[12..])
             .expect("Error while parsing request question");
 
-        Self {
+        Self::DnsRequest(DnsMessageForm {
             dns_header,
             dns_questions,
-            dns_answer,
-        }
+            dns_answer: None,
+        })
     }
 }

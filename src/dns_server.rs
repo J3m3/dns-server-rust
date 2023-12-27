@@ -6,7 +6,7 @@ mod domain_name;
 
 use dns_answer::{DnsAnswer, RecordData};
 use dns_header::DnsHeader;
-use dns_message::DnsMessage;
+use dns_message::{DnsMessage, DnsMessageForm};
 use dns_question::DnsQuestion;
 
 use std::{
@@ -31,12 +31,25 @@ impl DnsServer {
             match self.udp_socket.recv_from(&mut buf) {
                 Ok((size, source)) => {
                     println!("Received {} bytes from {}", size, source);
+
                     let filled_buf: Vec<u8> = buf[..size].to_vec();
-                    let request = DnsMessage::from(filled_buf);
+                    let request = match DnsMessage::from(filled_buf) {
+                        DnsMessage::DnsRequest(request) => request,
+                        DnsMessage::DnsResponse(_) => {
+                            eprintln!("Only DnsMessage::DnsRequest can be generated from Vec<u8>");
+                            Default::default()
+                        }
+                    };
 
                     let dns_response = self.create_response(&request);
+                    let dns_response = match Vec::<u8>::try_from(dns_response) {
+                        Ok(byte_vector) => byte_vector,
+                        Err(e) => {
+                            eprintln!("{e}");
+                            Default::default()
+                        }
+                    };
 
-                    let dns_response = Vec::from(dns_response);
                     self.udp_socket
                         .send_to(&dns_response, source)
                         .expect("Failed to send response");
@@ -49,15 +62,16 @@ impl DnsServer {
         }
     }
 
-    fn create_response(&self, request: &DnsMessage) -> DnsMessage {
-        use domain_name::DomainName;
+    fn create_response(&self, request: &DnsMessageForm) -> DnsMessage {
         println!("Request: {:?}", request);
 
-        let domain_name = "codecrafters.io";
+        let domain_name = request.dns_questions[0].domain_name.clone();
         let ip_addr = Ipv4Addr::new(8, 8, 8, 8);
 
         let dns_questions = vec![DnsQuestion {
-            domain_name: DomainName::Str(domain_name.to_string()),
+            domain_name: domain_name.clone(),
+            query_type: 1,
+            query_class: 1,
             ..Default::default()
         }];
         let dns_header = DnsHeader {
@@ -71,20 +85,22 @@ impl DnsServer {
             ..Default::default()
         };
         let dns_answer = DnsAnswer {
-            domain_name: DomainName::Str(domain_name.to_string()),
+            domain_name,
+            record_type: 1,
+            class: 1,
             ttl: 60,
-            rdlength: 4,
+            rdlength: ip_addr.octets().len() as u16,
             rdata: RecordData::IpAddress(ip_addr),
             ..Default::default()
         };
 
-        let dns_response = DnsMessage {
+        let dns_response = DnsMessageForm {
             dns_header,
             dns_questions,
-            dns_answer,
+            dns_answer: Some(dns_answer),
         };
 
         println!("Response: {:?}", dns_response);
-        dns_response
+        DnsMessage::DnsResponse(dns_response)
     }
 }

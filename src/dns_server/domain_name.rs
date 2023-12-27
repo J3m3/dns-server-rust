@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DomainName {
     Str(String),
     Vec(Vec<u8>),
