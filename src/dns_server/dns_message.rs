@@ -58,8 +58,9 @@ impl DnsMessage {
         if start >= end {
             None
         } else {
-            let mask: u8 = (start..end).map(|i| 2u8.pow(7 - i)).sum();
-            Some(byte & mask)
+            let mask_max = 7;
+            let mask: u8 = (start..end).map(|i| 2u8.pow(mask_max - i)).sum();
+            Some((byte & mask) >> mask_max - end)
         }
     }
 }
