@@ -11,6 +11,7 @@ pub struct DnsMessage {
 
 impl DnsMessage {
     fn parse_header(header_bytes: &[u8]) -> Option<DnsHeader> {
+        println!("Header received: {:?}", header_bytes);
         let id = DnsMessage::to_u16(&header_bytes[0..2]);
         let qr = DnsMessage::mask_bits(header_bytes[2], 0, 1)?;
         let opcode = DnsMessage::mask_bits(header_bytes[2], 1, 5)?;
@@ -41,20 +42,20 @@ impl DnsMessage {
         })
     }
 
-    fn parse_question(question_bytes: &[u8]) -> Option<DnsQuestion> {
-        todo!()
-    }
+    // fn parse_question(question_bytes: &[u8]) -> Option<DnsQuestion> {
+    //     todo!()
+    // }
 
-    fn parse_answer(answer_bytes: &[u8]) -> Option<DnsAnswer> {
-        todo!()
-    }
+    // fn parse_answer(answer_bytes: &[u8]) -> Option<DnsAnswer> {
+    //     todo!()
+    // }
 
     fn to_u16(bytes: &[u8]) -> u16 {
         bytes[0] as u16 + ((bytes[1] as u16) << 8)
     }
 
     fn mask_bits(byte: u8, start: u32, end: u32) -> Option<u8> {
-        if start <= end {
+        if start >= end {
             None
         } else {
             let mask: u8 = (start..end).map(|i| 2u8.pow(7 - i)).sum();
@@ -82,7 +83,7 @@ impl From<DnsMessage> for Vec<u8> {
 
 impl From<Vec<u8>> for DnsMessage {
     fn from(byte_vec: Vec<u8>) -> Self {
-        let dns_header = DnsMessage::parse_header(&byte_vec[0..12]).unwrap_or_default();
+        let dns_header = DnsMessage::parse_header(&byte_vec[0..12]).unwrap();
         let dns_questions = vec![DnsQuestion::default()];
         let dns_answer = DnsAnswer::default();
 

@@ -34,6 +34,7 @@ impl DnsServer {
 
                     let filled_buf: Vec<u8> = buf[..size].to_vec();
                     let request = DnsMessage::from(filled_buf);
+                    println!("Request: {:#?}", request);
 
                     let domain_name = "codecrafters.io";
                     let ip_addr = Ipv4Addr::new(8, 8, 8, 8);
