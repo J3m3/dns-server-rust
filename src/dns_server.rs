@@ -49,6 +49,7 @@ impl DnsServer {
                             Default::default()
                         }
                     };
+                    println!("Raw Response: {:?}", dns_response);
 
                     self.udp_socket
                         .send_to(&dns_response, source)

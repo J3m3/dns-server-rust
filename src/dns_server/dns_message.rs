@@ -43,6 +43,7 @@ impl DnsMessage {
             .iter()
             .take_while(|&&b| b != 0)
             .map(|&b| b)
+            .chain(0..1)
             .collect();
 
         let dns_questions = vec![DnsQuestion {
