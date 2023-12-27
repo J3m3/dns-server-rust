@@ -19,7 +19,7 @@ pub struct DnsAnswer {
 impl Default for DnsAnswer {
     fn default() -> Self {
         Self {
-            domain_name: "".to_string(),
+            domain_name: DomainName::Str("".to_string()),
             record_type: 1,
             class: 1,
             ttl: 60,

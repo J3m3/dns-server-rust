@@ -10,7 +10,7 @@ pub struct DnsQuestion {
 impl Default for DnsQuestion {
     fn default() -> Self {
         Self {
-            domain_name: "".to_string(),
+            domain_name: DomainName::Str("".to_string()),
             query_type: 1,
             query_class: 1,
         }

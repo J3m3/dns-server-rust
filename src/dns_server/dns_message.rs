@@ -1,6 +1,7 @@
 use super::dns_answer::DnsAnswer;
 use super::dns_header::DnsHeader;
-use super::dns_question::DnsQuestion;
+use super::dns_question::{self, DnsQuestion};
+use super::domain_name;
 
 #[derive(Debug)]
 pub struct DnsMessage {
@@ -12,43 +13,51 @@ pub struct DnsMessage {
 impl DnsMessage {
     fn parse_header(header_bytes: &[u8]) -> Option<DnsHeader> {
         println!("Header received: {:?}", header_bytes);
-        let id = DnsMessage::to_u16(&header_bytes[0..2]);
-        let qr = DnsMessage::mask_bits(header_bytes[2], 0, 1)?;
-        let opcode = DnsMessage::mask_bits(header_bytes[2], 1, 5)?;
-        let aa = DnsMessage::mask_bits(header_bytes[2], 5, 6)?;
-        let tc = DnsMessage::mask_bits(header_bytes[2], 6, 7)?;
-        let rd = DnsMessage::mask_bits(header_bytes[2], 7, 8)?;
-        let ra = DnsMessage::mask_bits(header_bytes[3], 0, 1)?;
-        let z = DnsMessage::mask_bits(header_bytes[3], 1, 4)?;
-        let rcode = DnsMessage::mask_bits(header_bytes[3], 4, 8)?;
-        let qdcount = DnsMessage::to_u16(&header_bytes[4..6]);
-        let ancount = DnsMessage::to_u16(&header_bytes[6..8]);
-        let nscount = DnsMessage::to_u16(&header_bytes[8..10]);
-        let arcount = DnsMessage::to_u16(&header_bytes[10..12]);
         Some(DnsHeader {
-            id,
-            qr,
-            opcode,
-            aa,
-            tc,
-            rd,
-            ra,
-            z,
-            rcode,
-            qdcount,
-            ancount,
-            nscount,
-            arcount,
+            id: DnsMessage::to_u16(&header_bytes[0..2]),
+            qr: DnsMessage::mask_bits(header_bytes[2], 0, 1)?,
+            opcode: DnsMessage::mask_bits(header_bytes[2], 1, 5)?,
+            aa: DnsMessage::mask_bits(header_bytes[2], 5, 6)?,
+            tc: DnsMessage::mask_bits(header_bytes[2], 6, 7)?,
+            rd: DnsMessage::mask_bits(header_bytes[2], 7, 8)?,
+            ra: DnsMessage::mask_bits(header_bytes[3], 0, 1)?,
+            z: DnsMessage::mask_bits(header_bytes[3], 1, 4)?,
+            rcode: DnsMessage::mask_bits(header_bytes[3], 4, 8)?,
+            qdcount: DnsMessage::to_u16(&header_bytes[4..6]),
+            ancount: DnsMessage::to_u16(&header_bytes[6..8]),
+            nscount: DnsMessage::to_u16(&header_bytes[8..10]),
+            arcount: DnsMessage::to_u16(&header_bytes[10..12]),
         })
     }
 
-    // fn parse_question(question_bytes: &[u8]) -> Option<DnsQuestion> {
-    //     todo!()
-    // }
+    fn parse_question(question_bytes: &[u8]) -> Option<(Vec<DnsQuestion>, DnsAnswer)> {
+        use super::dns_answer::RecordData;
+        use domain_name::DomainName;
+        use std::net::Ipv4Addr;
 
-    // fn parse_answer(answer_bytes: &[u8]) -> Option<DnsAnswer> {
-    //     todo!()
-    // }
+        let domain_name: Vec<u8> = question_bytes
+            .iter()
+            .map(|&b| b)
+            .take_while(|&b| b == 0)
+            .collect();
+
+        let dns_questions = vec![DnsQuestion {
+            domain_name: DomainName::Vec(domain_name.clone()),
+            query_type: 1,
+            query_class: 1,
+        }];
+
+        let dns_answer = DnsAnswer {
+            domain_name: DomainName::Vec(domain_name),
+            record_type: 1,
+            class: 1,
+            ttl: 60,
+            rdlength: 4,
+            rdata: RecordData::IpAddress(Ipv4Addr::new(8, 8, 8, 8)),
+        };
+
+        Some((dns_questions, dns_answer))
+    }
 
     fn to_u16(bytes: &[u8]) -> u16 {
         ((bytes[0] as u16) << 8) + bytes[1] as u16
@@ -84,9 +93,9 @@ impl From<DnsMessage> for Vec<u8> {
 
 impl From<Vec<u8>> for DnsMessage {
     fn from(byte_vec: Vec<u8>) -> Self {
-        let dns_header = DnsMessage::parse_header(&byte_vec[0..12]).unwrap();
-        let dns_questions = vec![DnsQuestion::default()];
-        let dns_answer = DnsAnswer::default();
+        let dns_header = DnsMessage::parse_header(&byte_vec[0..12]).unwrap_or_default();
+        let (dns_questions, dns_answer) = DnsMessage::parse_question(&byte_vec[12..])
+            .expect("Error while parsing request question");
 
         Self {
             dns_header,
