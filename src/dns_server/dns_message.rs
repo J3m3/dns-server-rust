@@ -51,7 +51,7 @@ impl DnsMessage {
     // }
 
     fn to_u16(bytes: &[u8]) -> u16 {
-        bytes[0] as u16 + ((bytes[1] as u16) << 8)
+        ((bytes[0] as u16) << 8) + bytes[1] as u16
     }
 
     fn mask_bits(byte: u8, start: u32, end: u32) -> Option<u8> {
