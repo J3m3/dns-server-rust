@@ -1,7 +1,6 @@
 use super::dns_answer::DnsAnswer;
 use super::dns_header::DnsHeader;
 use super::dns_question::DnsQuestion;
-use std::iter::Peekable;
 
 #[derive(Debug, Default)]
 pub struct DnsMessageForm {
@@ -15,6 +14,8 @@ pub enum DnsMessage {
     DnsRequest(DnsMessageForm),
     DnsResponse(DnsMessageForm),
 }
+
+const HEADER_LENGTH: usize = 12;
 
 impl DnsMessage {
     fn parse_header(header_bytes: &[u8]) -> Option<DnsHeader> {
@@ -40,13 +41,13 @@ impl DnsMessage {
         use super::domain_name::DomainName;
         println!("Question Bytes: {:?}", question_bytes);
 
-        let mut dns_questions = Vec::<DnsQuestion>::new();
-
-        let mut question_bytes_it = question_bytes.iter().peekable();
         fn consume_field<'a, T: Iterator<Item = &'a u8>>(it: &mut T) -> Option<u16> {
             Some(DnsMessage::to_u16(&[*it.next()?, *it.next()?]))
         }
 
+        let mut dns_questions = Vec::<DnsQuestion>::new();
+
+        let mut question_bytes_it = question_bytes.iter();
         while question_bytes_it.len() > 0 {
             let domain_name: Vec<u8> = Self::decode_domain(&mut question_bytes_it, question_bytes)?;
 
@@ -78,33 +79,35 @@ impl DnsMessage {
         }
     }
 
-    fn decode_domain<'a, I>(
-        question_bytes_it: &mut Peekable<I>,
-        question_bytes: &[u8],
-    ) -> Option<Vec<u8>>
+    fn decode_domain<'a, I>(question_bytes_it: &mut I, question_bytes: &[u8]) -> Option<Vec<u8>>
     where
         I: Iterator<Item = &'a u8>,
     {
         let mask = 0b11000000u8;
-        let first_byte = **question_bytes_it.peek()?;
         fn mask_first_2bits(first_byte: u8) -> Option<u8> {
             DnsMessage::mask_bits(first_byte, 0, 2)
         }
-        fn collect_domain<'a, T: Iterator<Item = &'a u8>>(it: T) -> Vec<u8> {
-            it.take_while(|&&b| b != 0).cloned().chain(0..1).collect()
+
+        let mut domain_name = Vec::<u8>::new();
+        while let Some(&first_byte) = question_bytes_it.next() {
+            if first_byte == 0 {
+                break;
+            }
+            if mask_first_2bits(first_byte)? == 0 {
+                // label not compressed
+                let length = first_byte as usize;
+                domain_name.extend(question_bytes_it.by_ref().take(length));
+            } else if mask_first_2bits(first_byte)? == mask {
+                // label compressed
+                let second_byte = *question_bytes_it.next()?;
+                let offset = Self::to_u16(&[first_byte & !mask, second_byte]) as usize;
+                let it = question_bytes.iter().skip(offset - HEADER_LENGTH);
+                domain_name.extend(it.take_while(|&&b| b != 0).cloned());
+            }
         }
 
-        if mask_first_2bits(first_byte)? == 0 {
-            // domain name not compressed
-            Some(collect_domain(question_bytes_it.by_ref()))
-        } else if mask_first_2bits(first_byte)? == mask {
-            // domain name compressed
-            let second_byte = *question_bytes_it.next()?;
-            let start_idx = Self::to_u16(&[first_byte & !mask, second_byte]) as usize;
-            Some(collect_domain(question_bytes.iter().skip(start_idx)))
-        } else {
-            None
-        }
+        domain_name.push(0);
+        Some(domain_name)
     }
 
     fn fold_section<T: Into<Vec<u8>>>(section: Vec<T>) -> Vec<u8> {
@@ -138,9 +141,8 @@ impl TryFrom<DnsMessage> for Vec<u8> {
 
 impl From<Vec<u8>> for DnsMessage {
     fn from(byte_vec: Vec<u8>) -> Self {
-        let header_length = 12;
-        let dns_header = Self::parse_header(&byte_vec[0..header_length]).unwrap_or_default();
-        let dns_questions = Self::parse_question(&byte_vec[header_length..])
+        let dns_header = Self::parse_header(&byte_vec[0..HEADER_LENGTH]).unwrap_or_default();
+        let dns_questions = Self::parse_question(&byte_vec[HEADER_LENGTH..])
             .expect("Error while parsing request question");
 
         Self::DnsRequest(DnsMessageForm {
