@@ -22,14 +22,14 @@ impl DnsMessage {
         println!("Header received: {:?}", header_bytes);
         Some(DnsHeader {
             id: Self::to_u16(&header_bytes[0..2]),
-            qr: Self::mask_bits(header_bytes[2], 0, 1)?,
-            opcode: Self::mask_bits(header_bytes[2], 1, 5)?,
-            aa: Self::mask_bits(header_bytes[2], 5, 6)?,
-            tc: Self::mask_bits(header_bytes[2], 6, 7)?,
-            rd: Self::mask_bits(header_bytes[2], 7, 8)?,
-            ra: Self::mask_bits(header_bytes[3], 0, 1)?,
-            z: Self::mask_bits(header_bytes[3], 1, 4)?,
-            rcode: Self::mask_bits(header_bytes[3], 4, 8)?,
+            qr: Self::slice_byte(header_bytes[2], 0, 1)?,
+            opcode: Self::slice_byte(header_bytes[2], 1, 5)?,
+            aa: Self::slice_byte(header_bytes[2], 5, 6)?,
+            tc: Self::slice_byte(header_bytes[2], 6, 7)?,
+            rd: Self::slice_byte(header_bytes[2], 7, 8)?,
+            ra: Self::slice_byte(header_bytes[3], 0, 1)?,
+            z: Self::slice_byte(header_bytes[3], 1, 4)?,
+            rcode: Self::slice_byte(header_bytes[3], 4, 8)?,
             qdcount: Self::to_u16(&header_bytes[4..6]),
             ancount: Self::to_u16(&header_bytes[6..8]),
             nscount: Self::to_u16(&header_bytes[8..10]),
@@ -69,7 +69,7 @@ impl DnsMessage {
         ((bytes[0] as u16) << 8) + bytes[1] as u16
     }
 
-    fn mask_bits(byte: u8, start: u32, end: u32) -> Option<u8> {
+    fn slice_byte(byte: u8, start: u32, end: u32) -> Option<u8> {
         let max_len = 8;
         if start >= end || end > max_len {
             None
@@ -85,8 +85,8 @@ impl DnsMessage {
         I: Iterator<Item = &'a u8>,
     {
         let mask = 0b11000000u8;
-        fn mask_first_2bits(first_byte: u8) -> Option<u8> {
-            DnsMessage::mask_bits(first_byte, 0, 2)
+        fn slice_first_2bits(first_byte: u8) -> Option<u8> {
+            DnsMessage::slice_byte(first_byte, 0, 2)
         }
 
         let mut domain_name = Vec::<u8>::new();
@@ -94,12 +94,12 @@ impl DnsMessage {
             if first_byte == 0 {
                 break;
             }
-            if mask_first_2bits(first_byte)? == 0 {
+            if slice_first_2bits(first_byte)? == 0 {
                 // label not compressed
                 let length = first_byte as usize;
                 domain_name.push(first_byte);
                 domain_name.extend(question_bytes_it.by_ref().take(length));
-            } else if mask_first_2bits(first_byte)? == mask {
+            } else if slice_first_2bits(first_byte)? == (mask >> 6) {
                 // label compressed
                 let second_byte = *question_bytes_it.next()?;
                 let offset = Self::to_u16(&[first_byte & !mask, second_byte]) as usize;
