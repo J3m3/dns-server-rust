@@ -38,6 +38,7 @@ impl DnsMessage {
 
     fn parse_question(question_bytes: &[u8]) -> Option<Vec<DnsQuestion>> {
         use super::domain_name::DomainName;
+        println!("Question Bytes: {:?}", question_bytes);
 
         let mut dns_questions = Vec::<DnsQuestion>::new();
 
