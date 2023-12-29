@@ -96,6 +96,7 @@ impl DnsMessage {
             if mask_first_2bits(first_byte)? == 0 {
                 // label not compressed
                 let length = first_byte as usize;
+                domain_name.push(first_byte);
                 domain_name.extend(question_bytes_it.by_ref().take(length));
             } else if mask_first_2bits(first_byte)? == mask {
                 // label compressed
