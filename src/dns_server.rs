@@ -44,10 +44,15 @@ impl DnsServer {
             .dns_questions
             .iter()
             .map(|dns_question| {
-                DnsMessage::DnsRequest(DnsMessageForm {
-                    dns_header: dns_request.dns_header.clone(),
-                    dns_questions: vec![dns_question.clone()],
-                    dns_answers: None,
+                DnsMessage::DnsRequest({
+                    let mut dns_header = dns_request.dns_header.clone();
+                    dns_header.qdcount = 1;
+
+                    DnsMessageForm {
+                        dns_header,
+                        dns_questions: vec![dns_question.clone()],
+                        dns_answers: None,
+                    }
                 })
             })
             .collect()
@@ -59,6 +64,7 @@ impl DnsServer {
         loop {
             let (size, source) = self.udp_socket.recv_from(&mut buf)?;
             let filled_buf: Vec<u8> = buf[..size].to_vec();
+            println!("Raw request from Client: {filled_buf:?}");
 
             let request = match DnsMessage::from(filled_buf) {
                 DnsMessage::DnsRequest(request) => request,
@@ -67,6 +73,7 @@ impl DnsServer {
                     Default::default()
                 }
             };
+            println!("Parsed request from Client: {request:?}");
 
             let dns_response: Vec<u8> = self.create_response(&request).into();
             self.udp_socket.send_to(&dns_response, source)?;
@@ -105,8 +112,9 @@ impl DnsServer {
     }
 
     fn create_response_answers(&self, request: &DnsMessageForm) -> Vec<DnsAnswer> {
-        let forwarded_it = self
-            .split_request(&request)
+        let splitted_requests = self.split_request(&request);
+        println!("Splitted Requests: {splitted_requests:?}");
+        let forwarded_it = splitted_requests
             .into_iter()
             .flat_map(|dns_message| {
                 let DnsMessage::DnsRequest(dns_request) = dns_message else {
@@ -121,6 +129,7 @@ impl DnsServer {
 
         let dns_answers = forwarded_it
             .flat_map(|transparent_response| {
+                println!("Parsed response from DNS server: {transparent_response:?}");
                 let DnsMessage::DnsResponse(response) = transparent_response else {
                     eprintln!("Only DnsMessage::DnsResponse can be returned");
                     unreachable!()
