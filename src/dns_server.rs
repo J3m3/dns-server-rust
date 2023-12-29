@@ -66,42 +66,54 @@ impl DnsServer {
     fn create_response(&self, request: &DnsMessageForm) -> DnsMessage {
         println!("Request: {:?}", request);
 
-        let domain_name = request.dns_questions[0].domain_name.clone();
-        let ip_addr = Ipv4Addr::new(8, 8, 8, 8);
+        let dns_header = self.create_response_header(&request);
+        let dns_questions = self.create_response_questions(&request);
+        let dns_answers = self.create_response_answers(&request);
 
-        let dns_questions = vec![DnsQuestion {
-            domain_name: domain_name.clone(),
-            query_type: 1,
-            query_class: 1,
-            ..Default::default()
-        }];
-        let dns_header = DnsHeader {
+        let dns_response = DnsMessageForm {
+            dns_header,
+            dns_questions,
+            dns_answers: Some(dns_answers),
+        };
+
+        println!("Response: {:?}", dns_response);
+        DnsMessage::DnsResponse(dns_response)
+    }
+
+    fn create_response_header(&self, request: &DnsMessageForm) -> DnsHeader {
+        DnsHeader {
             id: request.dns_header.id,
             qr: 1,
             opcode: request.dns_header.opcode,
             rd: request.dns_header.rd,
             rcode: if request.dns_header.opcode == 0 { 0 } else { 4 },
-            qdcount: dns_questions.len() as u16,
-            ancount: 1,
+            qdcount: request.dns_questions.len() as u16,
+            ancount: request.dns_questions.len() as u16,
             ..Default::default()
-        };
-        let dns_answer = DnsAnswer {
-            domain_name,
-            record_type: 1,
-            class: 1,
-            ttl: 60,
-            rdlength: ip_addr.octets().len() as u16,
-            rdata: RecordData::IpAddress(ip_addr),
-            ..Default::default()
-        };
+        }
+    }
 
-        let dns_response = DnsMessageForm {
-            dns_header,
-            dns_questions,
-            dns_answer: Some(dns_answer),
-        };
+    fn create_response_questions(&self, request: &DnsMessageForm) -> Vec<DnsQuestion> {
+        request.dns_questions.as_slice().to_vec()
+    }
 
-        println!("Response: {:?}", dns_response);
-        DnsMessage::DnsResponse(dns_response)
+    fn create_response_answers(&self, request: &DnsMessageForm) -> Vec<DnsAnswer> {
+        request
+            .dns_questions
+            .iter()
+            .map(|dns_question| {
+                let domain_name = dns_question.domain_name.clone();
+                let ip_addr = Ipv4Addr::new(8, 8, 8, 8);
+                DnsAnswer {
+                    domain_name: domain_name.clone(),
+                    record_type: 1,
+                    class: 1,
+                    ttl: 60,
+                    rdlength: ip_addr.octets().len() as u16,
+                    rdata: RecordData::IpAddress(ip_addr),
+                    ..Default::default()
+                }
+            })
+            .collect()
     }
 }

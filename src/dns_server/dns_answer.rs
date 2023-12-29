@@ -1,12 +1,12 @@
 use super::domain_name::{DomainName, LabelEncodable};
 use std::net::Ipv4Addr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RecordData {
     IpAddress(Ipv4Addr),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DnsAnswer {
     pub domain_name: DomainName,
     pub record_type: u16,

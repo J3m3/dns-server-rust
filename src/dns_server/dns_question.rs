@@ -1,6 +1,6 @@
 use super::domain_name::{DomainName, LabelEncodable};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DnsQuestion {
     pub domain_name: DomainName,
     pub query_type: u16,
