@@ -203,17 +203,18 @@ impl From<Vec<u8>> for DnsMessage {
             .expect("Error while parsing request question");
         let dns_answers = Self::parse_answer(&byte_vec, dns_header.qdcount, consumed_amount);
 
-        match dns_answers {
-            Some(_) => Self::DnsResponse(DnsMessageForm {
+        match dns_header.qr {
+            0 => Self::DnsRequest(DnsMessageForm {
                 dns_header,
                 dns_questions,
                 dns_answers,
             }),
-            None => Self::DnsRequest(DnsMessageForm {
+            1 => Self::DnsResponse(DnsMessageForm {
                 dns_header,
                 dns_questions,
                 dns_answers,
             }),
+            _ => unreachable!(),
         }
     }
 }
