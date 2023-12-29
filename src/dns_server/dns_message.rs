@@ -103,6 +103,7 @@ impl DnsMessage {
                 // label compressed
                 let second_byte = *question_bytes_it.next()?;
                 let offset = Self::to_u16(&[first_byte & !mask, second_byte]) as usize;
+                println!("Offset: {offset}");
                 let it = question_bytes.iter().skip(offset - HEADER_LENGTH);
                 domain_name.extend(it.take_while(|&&b| b != 0).cloned());
             }
