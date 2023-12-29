@@ -30,9 +30,8 @@ impl DnsServer {
         loop {
             match self.udp_socket.recv_from(&mut buf) {
                 Ok((size, source)) => {
-                    println!("Received {} bytes from {}", size, source);
-
                     let filled_buf: Vec<u8> = buf[..size].to_vec();
+                    println!("Raw Request: {filled_buf:?}");
                     let request = match DnsMessage::from(filled_buf) {
                         DnsMessage::DnsRequest(request) => request,
                         DnsMessage::DnsResponse(_) => {

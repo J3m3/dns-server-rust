@@ -39,7 +39,7 @@ impl DnsMessage {
 
     fn parse_question(question_bytes: &[u8]) -> Option<Vec<DnsQuestion>> {
         use super::domain_name::DomainName;
-        println!("Question Bytes: {:?}", question_bytes);
+        println!("Question received: {:?}", question_bytes);
 
         fn consume_field<'a, T: Iterator<Item = &'a u8>>(it: &mut T) -> Option<u16> {
             Some(DnsMessage::to_u16(&[*it.next()?, *it.next()?]))
@@ -50,6 +50,7 @@ impl DnsMessage {
         let mut question_bytes_it = question_bytes.iter();
         while question_bytes_it.len() > 0 {
             let domain_name: Vec<u8> = Self::decode_domain(&mut question_bytes_it, question_bytes)?;
+            println!("Domain Name in parse_question: {domain_name:?}");
 
             let query_type = consume_field(&mut question_bytes_it)?;
             let query_class = consume_field(&mut question_bytes_it)?;
