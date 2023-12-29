@@ -21,7 +21,6 @@ const HEADER_LENGTH: usize = 12;
 
 impl DnsMessage {
     fn parse_header(bytes: &[u8]) -> Option<DnsHeader> {
-        println!("Header received: {:?}", bytes);
         Some(DnsHeader {
             id: Self::to_u16(&bytes[0..2]),
             qr: Self::slice_byte(bytes[2], 0, 1)?,
@@ -41,7 +40,6 @@ impl DnsMessage {
 
     fn parse_question(bytes: &[u8], num_of_question: u16) -> Option<(Vec<DnsQuestion>, usize)> {
         use super::domain_name::DomainName;
-        println!("Question received: {:?}", bytes);
 
         let mut dns_questions = Vec::<DnsQuestion>::new();
 
@@ -49,7 +47,6 @@ impl DnsMessage {
         let initial_length = subbytes_it.len();
         for _ in 0..num_of_question {
             let domain_name: Vec<u8> = Self::decode_domain(&mut subbytes_it, bytes)?;
-            println!("Domain Name in parse_question: {domain_name:?}");
 
             let query_type = Self::consume_2bytes_fields(&mut subbytes_it)?;
             let query_class = Self::consume_2bytes_fields(&mut subbytes_it)?;
@@ -71,7 +68,6 @@ impl DnsMessage {
     ) -> Option<Vec<DnsAnswer>> {
         use super::domain_name::DomainName;
         use super::RecordData;
-        println!("Answer received: {:?}", bytes);
 
         let mut dns_answers = Vec::<DnsAnswer>::new();
 

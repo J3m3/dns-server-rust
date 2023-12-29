@@ -10,10 +10,11 @@ use std::{
 
 fn main() -> Result<()> {
     println!("Start DNS server");
-    let target_server = env::args().nth(1).ok_or(Error::new(
+    let target_server = env::args().nth(2).ok_or(Error::new(
         ErrorKind::InvalidInput,
         "No target server provided",
     ))?;
+    println!("{}", target_server);
     let config = Config::new(target_server);
 
     let server = DnsServer::new("127.0.0.1:2053", config)?;

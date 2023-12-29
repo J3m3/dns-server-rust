@@ -59,7 +59,6 @@ impl DnsServer {
         loop {
             let (size, source) = self.udp_socket.recv_from(&mut buf)?;
             let filled_buf: Vec<u8> = buf[..size].to_vec();
-            println!("Raw Request: {filled_buf:?}");
 
             let request = match DnsMessage::from(filled_buf) {
                 DnsMessage::DnsRequest(request) => request,
@@ -70,15 +69,11 @@ impl DnsServer {
             };
 
             let dns_response: Vec<u8> = self.create_response(&request).into();
-            println!("Raw Response: {:?}", dns_response);
-
             self.udp_socket.send_to(&dns_response, source)?;
         }
     }
 
     fn create_response(&self, request: &DnsMessageForm) -> DnsMessage {
-        println!("Request: {:?}", request);
-
         let dns_header = self.create_response_header(&request);
         let dns_questions = self.create_response_questions(&request);
         let dns_answers = self.create_response_answers(&request);
@@ -89,7 +84,6 @@ impl DnsServer {
             dns_answers: Some(dns_answers),
         };
 
-        println!("Response: {:?}", dns_response);
         DnsMessage::DnsResponse(dns_response)
     }
 
@@ -119,7 +113,9 @@ impl DnsServer {
                     eprintln!("Only DnsMessage::DnsRequest can be returned");
                     unreachable!()
                 };
-                self.forward_request_and_return(&dns_request)
+                let raw_response = self.forward_request_and_return(&dns_request);
+                println!("Raw response from DNS server: {raw_response:?}");
+                raw_response
             })
             .map(|raw_response| DnsMessage::from(raw_response));
 
