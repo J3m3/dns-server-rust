@@ -106,6 +106,7 @@ impl DnsMessage {
                 println!("Offset: {offset}");
                 let it = question_bytes.iter().skip(offset - HEADER_LENGTH);
                 domain_name.extend(it.take_while(|&&b| b != 0).cloned());
+                break;
             }
         }
 
